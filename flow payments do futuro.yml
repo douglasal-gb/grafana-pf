@@ -1,0 +1,109 @@
+---
+# Mapeamento de métricas para cada etapa do fluxo
+widgets:
+  - id: "A"
+    dataRef: "transacoes_gateway"
+    thresholds:
+      - gt: 1
+        color: "#73BF69"  # verde
+      - gt: 0
+        color: "#EAB839"  # amarelo
+      - lt: 1
+        color: "#E24D42"  # vermelho
+
+  - id: "B"
+    dataRef: "status_veripag"
+    thresholds:
+      - gt: 1
+        color: "#73BF69"
+      - gt: 0
+        color: "#EAB839"
+      - lt: 1
+        color: "#E24D42"
+
+  - id: "C"
+    dataRef: "registro_recebiveis"
+    thresholds:
+      - eq: 1
+        color: "#73BF69"
+      - lt: 1
+        color: "#E24D42"
+
+  - id: "D"
+    dataRef: "edi_processado"
+    thresholds:
+      - eq: 1
+        color: "#73BF69"
+      - lt: 1
+        color: "#E24D42"
+
+  - id: "E"
+    dataRef: "liquidacao_concluida"
+    thresholds:
+      - eq: 1
+        color: "#73BF69"
+      - lt: 1
+        color: "#EAB839"
+
+  - id: "F"
+    dataRef: "enviado_equals"
+    thresholds:
+      - eq: 1
+        color: "#73BF69"
+      - lt: 1
+        color: "#EAB839"
+
+  - id: "G"
+    dataRef: "integracao_sap_ok"
+    thresholds:
+      - eq: 1
+        color: "#73BF69"
+      - lt: 1
+        color: "#E24D42"
+
+# Exemplo de fluxo animado entre B -> E -> F
+connectors:
+  - source: "B"
+    target: "E"
+    flow: "flow_rate_b_e"
+  - source: "E"
+    target: "F"
+    flow: "flow_rate_e_f"
+
+# Exemplo de link em nós (clique abre outro dashboard)
+links:
+  - id: "E"
+    url: "/d/abcdef/liquidacoes-dashboard?var-date=${__cell.value}"
+
+# Definição das métricas (dataRefs)
+data:
+  transacoes_gateway:
+    query: |
+      # Grafana query: conta transações no gateway (hoje)
+      SELECT count(*) FROM movimentacoes
+      WHERE origem = 'GATEWAY' AND date_trunc('day', created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = $__dateFrom()
+  status_veripag:
+    query: |
+      SELECT CASE 
+        WHEN min(...) IS NULL THEN 0 
+        WHEN max(...) IS NULL THEN 1 
+        ELSE 2 END
+      FROM ...
+  registro_recebiveis:
+    query: |
+      SELECT count(*) > 0 FROM recebiveis WHERE date = $__dateFrom()
+  edi_processado:
+    query: |
+      SELECT count(*) > 0 FROM edi_logs WHERE date = $__dateFrom()
+  liquidacao_concluida:
+    query: |
+      SELECT CASE WHEN max(end_time) IS NOT NULL THEN 1 ELSE 0 END FROM liquidacoes
+      WHERE date_trunc('day', created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = $__dateFrom()
+  enviado_equals:
+    query: |
+      SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END
+      FROM conciliacoes_equals WHERE date= $__dateFrom()
+  integracao_sap_ok:
+    query: |
+      SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END
+      FROM sap_integracoes WHERE date= $__dateFrom()
