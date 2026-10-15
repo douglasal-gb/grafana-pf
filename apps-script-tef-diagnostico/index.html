@@ -250,6 +250,51 @@
             margin-top: 10px;
         }
 
+        .cache-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px auto 0;
+            max-width: 900px;
+            padding: 10px 16px;
+            background: var(--surface-solid);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .cache-bar.visible { display: flex; }
+
+        .cache-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .cache-pill.hit {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success-color);
+        }
+
+        .cache-pill.bq {
+            background: rgba(38, 79, 236, 0.12);
+            color: var(--primary-color);
+        }
+
+        .cache-pill.stale {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+        }
+
         .loader {
             display: none;
             width: 44px;
@@ -714,6 +759,7 @@
             <div class="search-row" id="searchRowText">
                 <input type="text" id="searchInput" placeholder="" onkeypress="handleKeyPress(event)">
                 <button class="btn btn-primary" onclick="executeSearch()">Buscar</button>
+                <button class="btn btn-outline" onclick="executeSearch(null, null, true)" title="Ignora o cache e consulta o BigQuery">Atualizar</button>
             </div>
             <div class="search-row hidden" id="searchRowUf">
                 <select id="ufSelect" onchange="onUfSelectChange()">
@@ -747,8 +793,14 @@
                     <option value="TO">TO - Tocantins</option>
                 </select>
                 <button class="btn btn-primary" onclick="executeSearch()">Buscar UF</button>
+                <button class="btn btn-outline" onclick="executeSearch(null, null, true)" title="Ignora o cache e consulta o BigQuery">Atualizar</button>
             </div>
             <div id="searchHint" class="search-hint"></div>
+        </div>
+
+        <div id="cacheBar" class="cache-bar">
+            <div id="cacheBarText"></div>
+            <button class="btn btn-outline btn-sm" onclick="executeSearch(null, null, true)">Atualizar da base</button>
         </div>
 
         <div class="loader" id="loader"></div>
@@ -818,6 +870,8 @@
         let currentSearchMode = 'RESUMO_SERVIDORES';
         let currentDataset = [];
         let currentStoreData = null;
+        let currentCacheMeta = null;
+        let lastSearchTerm = '';
 
         const modeButtons = {
             RESUMO_SERVIDORES: 'btnModeGlobal',
@@ -885,15 +939,19 @@
             setSearchMode('LOJA');
         }
 
-        function executeSearch(term, forcedMode) {
+        function executeSearch(term, forcedMode, forceRefresh) {
             const searchInput = document.getElementById('searchInput');
             const mode = forcedMode || currentSearchMode;
             let searchTerm;
 
             if (term !== null && term !== undefined) {
                 searchTerm = term;
+            } else if (lastSearchTerm && forceRefresh) {
+                searchTerm = lastSearchTerm;
             } else if (mode === 'UF') {
                 searchTerm = document.getElementById('ufSelect').value.trim();
+            } else if (mode === 'RESUMO_SERVIDORES') {
+                searchTerm = '';
             } else {
                 searchTerm = searchInput.value.trim();
             }
@@ -902,37 +960,94 @@
                 showToast('Selecione uma UF para buscar.');
                 return;
             }
-            if ((mode === 'LOJA' || mode === 'SERVIDOR') && !searchTerm && forcedMode == null) {
+            if ((mode === 'LOJA' || mode === 'SERVIDOR') && !searchTerm && forcedMode == null && !forceRefresh) {
                 showToast('Informe um termo para buscar.');
                 return;
             }
 
-            if (term !== null && term !== undefined && searchInput && mode !== 'UF') {
+            if (term !== null && term !== undefined && searchInput && mode !== 'UF' && mode !== 'RESUMO_SERVIDORES') {
                 searchInput.value = term;
             }
             if (mode === 'UF' && searchTerm) {
                 document.getElementById('ufSelect').value = searchTerm;
             }
 
+            lastSearchTerm = searchTerm;
             document.getElementById('dashboard').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
             document.getElementById('actionBar').style.display = 'none';
+            hideCacheBar();
+
+            const force = forceRefresh === true;
 
             if (!isLocalMode) {
                 google.script.run
                     .withSuccessHandler(onSuccess)
                     .withFailureHandler(onError)
-                    .searchStoreBigQuery(searchTerm, mode);
+                    .searchStoreBigQuery(searchTerm, mode, force);
             } else {
-                setTimeout(function () { mockDataRender(searchTerm, mode); }, 500);
+                setTimeout(function () { mockDataRender(searchTerm, mode, force); }, 400);
             }
+        }
+
+        function parseEnvelope(data) {
+            const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+            if (Array.isArray(parsed)) {
+                return { dataArray: parsed, meta: null };
+            }
+            return {
+                dataArray: (parsed && parsed.data) ? parsed.data : [],
+                meta: (parsed && parsed.meta) ? parsed.meta : null
+            };
         }
 
         function onSuccess(data) {
             document.getElementById('loader').style.display = 'none';
-            const dataArray = typeof data === 'string' ? JSON.parse(data) : data;
-            currentDataset = dataArray || [];
+            const envelope = parseEnvelope(data);
+            currentDataset = envelope.dataArray || [];
+            currentCacheMeta = envelope.meta;
+            renderCacheBar(envelope.meta);
             renderData(currentDataset);
+        }
+
+        function hideCacheBar() {
+            const bar = document.getElementById('cacheBar');
+            if (bar) bar.classList.remove('visible');
+        }
+
+        function renderCacheBar(meta) {
+            const bar = document.getElementById('cacheBar');
+            const text = document.getElementById('cacheBarText');
+            if (!bar || !text || !meta) {
+                hideCacheBar();
+                return;
+            }
+
+            let pillClass = 'bq';
+            let pillLabel = 'BigQuery';
+            if (meta.cache_status === 'HIT' || meta.source === 'cache') {
+                pillClass = 'hit';
+                pillLabel = 'Cache';
+            } else if (meta.cache_status === 'STALE_FALLBACK') {
+                pillClass = 'stale';
+                pillLabel = 'Cache D-2';
+            } else if (meta.cache_status === 'REFRESHED') {
+                pillClass = 'bq';
+                pillLabel = 'Atualizado';
+            } else if (meta.cache_status === 'STORED') {
+                pillClass = 'bq';
+                pillLabel = 'BQ → Cache';
+            }
+
+            const ref = meta.ref_date ? ('Ref. dados: ' + meta.ref_date) : '';
+            const at = meta.cached_at ? (' · Gerado: ' + meta.cached_at.replace('T', ' ')) : '';
+            const note = meta.note ? (' · ' + meta.note) : '';
+            const rows = meta.row_count != null ? (' · ' + meta.row_count + ' registro(s)') : '';
+
+            text.innerHTML =
+                '<span class="cache-pill ' + pillClass + '">' + pillLabel + '</span> ' +
+                '<span>' + escapeHtml(ref + at + rows + note) + '</span>';
+            bar.classList.add('visible');
         }
 
         function onError(errorMsg) {
@@ -1233,13 +1348,16 @@
                     .withFailureHandler(function (err) {
                         container.innerHTML = '<span style="color:var(--danger-color);font-size:0.85rem;">Erro: ' + escapeHtml(String(err)) + '</span>';
                     })
-                    .searchStoreBigQuery(storeCode, 'TERMINAIS_LOJA');
+                    .searchStoreBigQuery(storeCode, 'TERMINAIS_LOJA', false);
             } else {
                 setTimeout(function () {
-                    renderTerminals(JSON.stringify([
-                        { cod_pdv: '001', ip_servidor: 'SIT2-BOTICF1-12', nome_servidor: 'Sudeste 5', qtd_transacoes: 1500 },
-                        { cod_pdv: '002', ip_servidor: 'SIT2-BOTICF1-14', nome_servidor: 'Sudeste 7', qtd_transacoes: 50 }
-                    ]), storeCode);
+                    renderTerminals(JSON.stringify({
+                        data: [
+                            { cod_pdv: '001', ip_servidor: 'SIT2-BOTICF1-12', nome_servidor: 'Sudeste 5', qtd_transacoes: 1500 },
+                            { cod_pdv: '002', ip_servidor: 'SIT2-BOTICF1-14', nome_servidor: 'Sudeste 7', qtd_transacoes: 50 }
+                        ],
+                        meta: { source: 'cache', cache_status: 'HIT' }
+                    }), storeCode);
                 }, 700);
             }
         }
@@ -1247,7 +1365,8 @@
         function renderTerminals(dataStr, storeCode) {
             const container = document.getElementById('terminalsContainer_' + storeCode);
             if (!container) return;
-            const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
+            const envelope = parseEnvelope(dataStr);
+            const data = envelope.dataArray;
 
             if (!data || data.length === 0) {
                 container.innerHTML = '<div style="text-align:center;font-size:0.85rem;color:var(--text-secondary);padding:12px;border:1px dashed var(--border-color);border-radius:8px;">Nenhum PDV TEF encontrado.</div>';
@@ -1413,20 +1532,36 @@
             }, overrides || {});
         }
 
-        function mockDataRender(term, mode) {
+        function mockEnvelope(dataArray, force) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const ref = yesterday.toISOString().slice(0, 10);
+            return {
+                data: dataArray,
+                meta: {
+                    source: force ? 'bigquery' : 'cache',
+                    cache_status: force ? 'REFRESHED' : 'HIT',
+                    ref_date: ref,
+                    cached_at: new Date().toISOString().slice(0, 19),
+                    row_count: dataArray.length
+                }
+            };
+        }
+
+        function mockDataRender(term, mode, force) {
             if (mode === 'RESUMO_SERVIDORES') {
-                onSuccess([
+                onSuccess(mockEnvelope([
                     { nome_servidor: 'Sudeste 5', ip_servidor: 'SIT2-BOTICF1-12', qtd_lojas: 1245, total_transacoes: 1450300, volume_financeiro: 215400000.50 },
                     { nome_servidor: 'Sudeste 7', ip_servidor: 'SIT2-BOTICF1-14', qtd_lojas: 890, total_transacoes: 980500, volume_financeiro: 132100000.00 },
                     { nome_servidor: 'Sul 2', ip_servidor: 'SIT2-BOTICF1-18', qtd_lojas: 650, total_transacoes: 720000, volume_financeiro: 98500000.00 },
                     { nome_servidor: 'Nordeste 1', ip_servidor: 'SIT2-BOTICF1-03', qtd_lojas: 410, total_transacoes: 350000, volume_financeiro: 45000000.00 }
-                ]);
+                ], force));
                 return;
             }
 
             if (mode === 'UF') {
                 const uf = (term || 'SP').toUpperCase();
-                onSuccess([
+                onSuccess(mockEnvelope([
                     mockStore({ uf: uf, cidade: uf === 'RJ' ? 'Rio de Janeiro' : 'São Paulo', tipo_loja: 'Shopping' }),
                     mockStore({
                         codloja_clean: '00001045',
@@ -1442,12 +1577,12 @@
                         pct_uso_tef_30d: 92,
                         pct_uso_pos_30d: 8
                     })
-                ]);
+                ], force));
                 return;
             }
 
             if (mode === 'SERVIDOR') {
-                onSuccess([
+                onSuccess(mockEnvelope([
                     mockStore({ nome_servidor_tef_atual: String(term || 'Sudeste 5').toUpperCase() }),
                     mockStore({
                         codloja_clean: '00001045',
@@ -1460,7 +1595,7 @@
                         nome_servidor_tef_atual: String(term || 'Sudeste 5').toUpperCase(),
                         pdvs_roteamento_divergente: 'SIM'
                     })
-                ]);
+                ], force));
                 return;
             }
 
@@ -1468,7 +1603,7 @@
             const terms = term.split(/[,;\n]+/).map(function (t) { return t.trim(); }).filter(Boolean);
 
             if (terms.length > 1) {
-                onSuccess(terms.map(function (t, idx) {
+                onSuccess(mockEnvelope(terms.map(function (t, idx) {
                     return mockStore({
                         codloja_clean: t.replace(/^(ES|PS)/i, '').padStart(8, '0'),
                         grupo_franquia: 'Franquia (' + t + ')',
@@ -1484,11 +1619,11 @@
                         servidores_mesmo_dia: idx % 2 === 0 ? 'Nenhum' : 'Sul 2 | Sul 1',
                         pdvs_roteamento_divergente: idx % 2 === 0 ? 'NÃO' : 'SIM'
                     });
-                }));
+                }), force));
                 return;
             }
 
-            onSuccess([mockStore({
+            onSuccess(mockEnvelope([mockStore({
                 codloja_clean: term.replace(/^(ES|PS)/i, '').padStart(8, '0'),
                 grupo_franquia: 'Franquia (' + term + ')',
                 uf: 'PR',
@@ -1505,7 +1640,7 @@
                 pdvs_roteamento_divergente: 'SIM',
                 pct_uso_tef_30d: 60,
                 pct_uso_pos_30d: 40
-            })]);
+            })], force));
         }
 
         window.onload = function () {

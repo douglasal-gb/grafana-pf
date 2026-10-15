@@ -6,7 +6,8 @@
  * Melhorias:
  *  - Join com trusted-zone.canal_loja.tb_canal_loja_geral_ttd (UF, cidade, bairro, tipo local)
  *  - Modo de busca por UF
- *  - CTEs compartilhadas + helpers (menos duplicação / melhor manutenção)
+ *  - Cache diário na planilha (evita BQ repetido; dados fecham em D-1)
+ *  - CTEs compartilhadas + helpers
  * ==============================================================================
  */
 
@@ -16,6 +17,21 @@ var CONFIG = {
   // cidade, bairro, estado, des_local_pdv_2 (Rua/Shopping/Hipermercado/Outros),
   // nome_cp_atual, des_regional_atualizada, des_regional, des_modelo, tp_pdv,
   // cod_franquia (zeros à esquerda extras), flg_cod_atual
+
+  // ---- Cache na planilha vinculada ao Apps Script ----
+  // Estratégia: a janela BQ é D-30..D-1 (fecha 1x/dia). A chave de validade é
+  // ref_date = ontem (America/Sao_Paulo). Mesmo modo+termo no mesmo ref_date = HIT.
+  // Antes de pipelineReadyHour, se ainda não houver cache do D-1 de hoje, reutiliza
+  // o cache do D-2 (evita consulta cara enquanto o pipeline pode estar rodando).
+  cache: {
+    enabled: true,
+    timezone: 'America/Sao_Paulo',
+    pipelineReadyHour: 8,          // hora local em que o D-1 costuma estar pronto no BQ
+    metaSheet: '_tef_cache_meta',  // índice das pesquisas
+    dataSheet: '_tef_cache_data',  // payload em chunks (limite ~50k chars/célula)
+    chunkSize: 45000,
+    maxAgeDays: 3                  // limpeza automática de entradas mais antigas
+  }
 };
 
 /**
@@ -170,30 +186,393 @@ function arrayStringParam(name, values) {
 }
 
 /* =============================================================================
+ * CACHE DIÁRIO (PLANILHA)
+ * =============================================================================
+ * Abas criadas automaticamente:
+ *  - _tef_cache_meta  → índice (chave, modo, termo, ref_date, created_at, chunks…)
+ *  - _tef_cache_data  → JSON fatiado em chunks (suporta listas grandes por UF/servidor)
+ *
+ * Quando consulta o BQ de novo?
+ *  1) Nunca houve cache para aquele modo+termo+ref_date
+ *  2) O dia virou (ref_date = ontem mudou) → miss automático
+ *  3) Usuário clicou em "Atualizar da base" (forceRefresh = true)
+ *  4) Antes das 08h, se ainda não existe cache do D-1, tenta D-2; senão BQ
+ * ============================================================================= */
+
+function getNowInTz_() {
+  return new Date(Utilities.formatDate(new Date(), CONFIG.cache.timezone, "yyyy-MM-dd'T'HH:mm:ss"));
+}
+
+function formatDateYmd_(dateObj) {
+  return Utilities.formatDate(dateObj, CONFIG.cache.timezone, 'yyyy-MM-dd');
+}
+
+function addDaysYmd_(ymd, deltaDays) {
+  var parts = ymd.split('-');
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  d.setDate(d.getDate() + deltaDays);
+  return Utilities.formatDate(d, CONFIG.cache.timezone, 'yyyy-MM-dd');
+}
+
+/** Data de referência dos dados fechados (D-1). */
+function getRefDate_() {
+  return addDaysYmd_(formatDateYmd_(new Date()), -1);
+}
+
+function getLocalHour_() {
+  return Number(Utilities.formatDate(new Date(), CONFIG.cache.timezone, 'H'));
+}
+
+/**
+ * Normaliza o termo para a chave de cache (mesma busca = mesma chave).
+ */
+function buildCacheKey_(mode, processedTerm) {
+  var m = mode || 'RESUMO_SERVIDORES';
+  if (m === 'RESUMO_SERVIDORES') return 'RESUMO_SERVIDORES';
+
+  if (m === 'LOJA') {
+    var codes = normalizeStoreCodes(processedTerm || '');
+    codes.sort();
+    return 'LOJA:' + codes.join(',');
+  }
+
+  if (m === 'UF') {
+    return 'UF:' + normalizeUf(processedTerm || '');
+  }
+
+  if (m === 'SERVIDOR') {
+    return 'SERVIDOR:' + String(processedTerm || '').trim().toLowerCase();
+  }
+
+  if (m === 'TERMINAIS_LOJA') {
+    var store = String(processedTerm || '').replace(/^(ES|PS)/i, '').replace(/^0+/, '').padStart(8, '0');
+    return 'TERMINAIS:' + store;
+  }
+
+  return m + ':' + String(processedTerm || '').trim().toLowerCase();
+}
+
+function getOrCreateSheet_(ss, name, headers) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+    try { sheet.hideSheet(); } catch (e) { /* ok se falhar */ }
+  } else if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function ensureCacheSheets_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error('Cache requer script vinculado a uma Planilha Google. Vincule o Apps Script à planilha.');
+  }
+  var meta = getOrCreateSheet_(ss, CONFIG.cache.metaSheet, [
+    'cache_key', 'mode', 'term', 'ref_date', 'created_at', 'chunks', 'row_count', 'bytes'
+  ]);
+  var data = getOrCreateSheet_(ss, CONFIG.cache.dataSheet, [
+    'cache_key', 'chunk_idx', 'payload'
+  ]);
+  return { ss: ss, meta: meta, data: data };
+}
+
+function findMetaRow_(metaSheet, cacheKey, refDate) {
+  var last = metaSheet.getLastRow();
+  if (last < 2) return -1;
+  var values = metaSheet.getRange(2, 1, last, 4).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === cacheKey && String(values[i][3]) === refDate) {
+      return i + 2; // 1-indexed sheet row
+    }
+  }
+  return -1;
+}
+
+function deleteCacheEntry_(cacheKey, refDate) {
+  var sheets = ensureCacheSheets_();
+  var meta = sheets.meta;
+  var data = sheets.data;
+
+  var row = findMetaRow_(meta, cacheKey, refDate);
+  if (row > 0) meta.deleteRow(row);
+
+  var last = data.getLastRow();
+  if (last < 2) return;
+  var values = data.getRange(2, 1, last, 1).getValues();
+  // delete from bottom to top
+  for (var i = values.length - 1; i >= 0; i--) {
+    if (String(values[i][0]) === cacheKey) {
+      data.deleteRow(i + 2);
+    }
+  }
+}
+
+function readCachePayload_(cacheKey, refDate) {
+  var sheets = ensureCacheSheets_();
+  var metaRow = findMetaRow_(sheets.meta, cacheKey, refDate);
+  if (metaRow < 0) return null;
+
+  var metaVals = sheets.meta.getRange(metaRow, 1, 1, 8).getValues()[0];
+  var chunkCount = Number(metaVals[5]) || 0;
+  var createdAt = metaVals[4];
+  var rowCount = Number(metaVals[6]) || 0;
+
+  var last = sheets.data.getLastRow();
+  if (last < 2) return null;
+
+  var values = sheets.data.getRange(2, 1, last, 3).getValues();
+  var chunks = [];
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === cacheKey) {
+      chunks.push({ idx: Number(values[i][1]), text: String(values[i][2] || '') });
+    }
+  }
+  if (!chunks.length) return null;
+
+  chunks.sort(function (a, b) { return a.idx - b.idx; });
+  var jsonText = chunks.map(function (c) { return c.text; }).join('');
+  var dataArr = JSON.parse(jsonText);
+
+  return {
+    data: dataArr,
+    meta: {
+      source: 'cache',
+      cache_key: cacheKey,
+      ref_date: refDate,
+      cached_at: createdAt instanceof Date
+        ? Utilities.formatDate(createdAt, CONFIG.cache.timezone, "yyyy-MM-dd'T'HH:mm:ss")
+        : String(createdAt),
+      row_count: rowCount || dataArr.length,
+      chunks: chunkCount || chunks.length
+    }
+  };
+}
+
+function writeCachePayload_(cacheKey, mode, term, refDate, dataArr) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    var sheets = ensureCacheSheets_();
+    // limpa entrada anterior da mesma chave (qualquer ref_date) para não acumular
+    purgeCacheKeyAllRefs_(cacheKey);
+
+    var jsonText = JSON.stringify(dataArr);
+    var size = jsonText.length;
+    var chunkSize = CONFIG.cache.chunkSize;
+    var chunkCount = Math.ceil(size / chunkSize) || 1;
+    var nowIso = Utilities.formatDate(new Date(), CONFIG.cache.timezone, "yyyy-MM-dd'T'HH:mm:ss");
+
+    sheets.meta.appendRow([
+      cacheKey,
+      mode,
+      term || '',
+      refDate,
+      nowIso,
+      chunkCount,
+      dataArr.length,
+      size
+    ]);
+
+    var rows = [];
+    for (var i = 0; i < chunkCount; i++) {
+      rows.push([
+        cacheKey,
+        i,
+        jsonText.substring(i * chunkSize, (i + 1) * chunkSize)
+      ]);
+    }
+    if (rows.length) {
+      sheets.data.getRange(sheets.data.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
+    }
+    SpreadsheetApp.flush();
+
+    return {
+      data: dataArr,
+      meta: {
+        source: 'bigquery',
+        cache_key: cacheKey,
+        ref_date: refDate,
+        cached_at: nowIso,
+        row_count: dataArr.length,
+        chunks: chunkCount,
+        stored: true
+      }
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function purgeCacheKeyAllRefs_(cacheKey) {
+  var sheets = ensureCacheSheets_();
+  var meta = sheets.meta;
+  var data = sheets.data;
+
+  var lastMeta = meta.getLastRow();
+  if (lastMeta >= 2) {
+    var metaVals = meta.getRange(2, 1, lastMeta, 1).getValues();
+    for (var i = metaVals.length - 1; i >= 0; i--) {
+      if (String(metaVals[i][0]) === cacheKey) meta.deleteRow(i + 2);
+    }
+  }
+
+  var lastData = data.getLastRow();
+  if (lastData >= 2) {
+    var dataVals = data.getRange(2, 1, lastData, 1).getValues();
+    for (var j = dataVals.length - 1; j >= 0; j--) {
+      if (String(dataVals[j][0]) === cacheKey) data.deleteRow(j + 2);
+    }
+  }
+}
+
+/**
+ * Remove caches com ref_date mais antigo que maxAgeDays.
+ * Pode ser agendado (Acionador diário) ou chamado manualmente.
+ */
+function limparCacheExpirado() {
+  if (!CONFIG.cache.enabled) return { removed: 0 };
+  var sheets = ensureCacheSheets_();
+  var cutoff = addDaysYmd_(getRefDate_(), -(CONFIG.cache.maxAgeDays || 3));
+  var meta = sheets.meta;
+  var last = meta.getLastRow();
+  if (last < 2) return { removed: 0 };
+
+  var values = meta.getRange(2, 1, last, 4).getValues();
+  var removed = 0;
+  for (var i = values.length - 1; i >= 0; i--) {
+    var key = String(values[i][0]);
+    var ref = String(values[i][3]);
+    if (ref < cutoff) {
+      deleteCacheEntry_(key, ref);
+      removed++;
+    }
+  }
+  return { removed: removed, cutoff: cutoff };
+}
+
+/** Limpa todo o cache TEF (abas meta + data). */
+function limparCacheTef() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Planilha ativa não encontrada.');
+  var meta = ss.getSheetByName(CONFIG.cache.metaSheet);
+  var data = ss.getSheetByName(CONFIG.cache.dataSheet);
+  if (meta) ss.deleteSheet(meta);
+  if (data) ss.deleteSheet(data);
+  ensureCacheSheets_();
+  return { ok: true };
+}
+
+/**
+ * Resolve cache: HIT | STALE_FALLBACK | MISS
+ */
+function resolveCache_(cacheKey, forceRefresh) {
+  if (!CONFIG.cache.enabled || forceRefresh) {
+    return { hit: false, reason: forceRefresh ? 'force_refresh' : 'disabled' };
+  }
+
+  var refDate = getRefDate_();
+  var cached = readCachePayload_(cacheKey, refDate);
+  if (cached) {
+    cached.meta.cache_status = 'HIT';
+    return { hit: true, payload: cached };
+  }
+
+  // Antes do horário do pipeline, reutiliza D-2 se existir
+  if (getLocalHour_() < CONFIG.cache.pipelineReadyHour) {
+    var prevRef = addDaysYmd_(refDate, -1);
+    var stale = readCachePayload_(cacheKey, prevRef);
+    if (stale) {
+      stale.meta.cache_status = 'STALE_FALLBACK';
+      stale.meta.note = 'Antes das ' + CONFIG.cache.pipelineReadyHour +
+        'h: reutilizando cache de ' + prevRef + ' (pipeline do D-1 pode ainda estar rodando).';
+      return { hit: true, payload: stale };
+    }
+  }
+
+  return { hit: false, reason: 'miss', ref_date: refDate };
+}
+
+function wrapResponse_(payload) {
+  return JSON.stringify(payload);
+}
+
+function parseDataArray_(jsonStr) {
+  var parsed = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && Array.isArray(parsed.data)) return parsed.data;
+  return [];
+}
+
+/* =============================================================================
  * API PRINCIPAL
  * ============================================================================= */
 
 /**
  * @param {string} searchTerm
  * @param {string} searchType - RESUMO_SERVIDORES | LOJA | SERVIDOR | UF | TERMINAIS_LOJA
+ * @param {boolean=} forceRefresh - true força nova consulta no BigQuery e sobrescreve o cache
+ * @return {string} JSON envelope { data, meta }
  */
-function searchStoreBigQuery(searchTerm, searchType) {
+function searchStoreBigQuery(searchTerm, searchType, forceRefresh) {
   try {
     var processedTerm = (searchTerm && typeof searchTerm === 'string') ? searchTerm.trim() : '';
     var mode = searchType || 'RESUMO_SERVIDORES';
+    var force = forceRefresh === true || forceRefresh === 'true';
 
-    // ROTA 1: VISÃO GLOBAL DE SERVIDORES
+    var cacheKey = buildCacheKey_(mode, processedTerm);
+    var refDate = getRefDate_();
+
+    // ---- CACHE LOOKUP ----
+    try {
+      var resolved = resolveCache_(cacheKey, force);
+      if (resolved.hit) {
+        return wrapResponse_(resolved.payload);
+      }
+    } catch (cacheReadErr) {
+      Logger.log('Cache read ignorado: ' + cacheReadErr);
+      // segue para BQ
+    }
+
+    // ---- BIGQUERY ----
+    var rawJson;
     if (mode === 'RESUMO_SERVIDORES') {
-      return queryResumoServidores();
+      rawJson = queryResumoServidores();
+    } else if (mode === 'TERMINAIS_LOJA' && processedTerm !== '') {
+      rawJson = queryTerminaisLoja(processedTerm);
+    } else {
+      rawJson = queryDashboard(processedTerm, mode);
     }
 
-    // ROTA 2: DRILL-DOWN DE TERMINAIS (PDVs) ON-DEMAND
-    if (mode === 'TERMINAIS_LOJA' && processedTerm !== '') {
-      return queryTerminaisLoja(processedTerm);
+    var dataArr = parseDataArray_(rawJson);
+
+    // ---- CACHE WRITE ----
+    if (CONFIG.cache.enabled) {
+      try {
+        var stored = writeCachePayload_(cacheKey, mode, processedTerm, refDate, dataArr);
+        stored.meta.cache_status = force ? 'REFRESHED' : 'STORED';
+        stored.meta.force_refresh = force;
+        return wrapResponse_(stored);
+      } catch (cacheWriteErr) {
+        Logger.log('Cache write falhou: ' + cacheWriteErr);
+      }
     }
 
-    // ROTA 3: DASHBOARD (LOJA | SERVIDOR | UF)
-    return queryDashboard(processedTerm, mode);
+    return wrapResponse_({
+      data: dataArr,
+      meta: {
+        source: 'bigquery',
+        cache_key: cacheKey,
+        ref_date: refDate,
+        cached_at: null,
+        row_count: dataArr.length,
+        cache_status: 'BYPASS',
+        force_refresh: force
+      }
+    });
 
   } catch (error) {
     Logger.log('Erro ao consultar BigQuery: ' + error.toString());
