@@ -30,6 +30,28 @@ Google Apps Script + HTML (Google Sites / Web App) para diagnóstico de infraest
 4. **Performance / manutenção**
    - CTEs de servidores e canal centralizadas
    - Filtro por UF antes do scan de transações (`lojas_filtro_uf`)
+5. **Cache diário na planilha** (ver abaixo)
+
+## Cache diário (planilha)
+
+Como os dados do BQ fecham em **D-1** (atualizam ~1x/dia), o backend grava o resultado de cada pesquisa nas abas ocultas:
+
+| Aba | Função |
+|-----|--------|
+| `_tef_cache_meta` | Índice: chave, modo, termo, `ref_date`, horário, chunks |
+| `_tef_cache_data` | Payload JSON em chunks (suporta listas grandes) |
+
+**Quando usa cache (não chama BQ):** mesma chave (`modo + termo normalizado`) com `ref_date = ontem`.
+
+**Quando consulta o BQ de novo:**
+1. Primeira vez daquele modo/termo no dia (miss)
+2. Virada do dia (`ref_date` muda) → miss automático
+3. Botão **Atualizar** / **Atualizar da base** (`forceRefresh = true`)
+4. Antes das 08h (`pipelineReadyHour`): se ainda não há cache do D-1, reutiliza D-2 (evita BQ enquanto o pipeline pode estar rodando)
+
+**Manutenção:** menu `TEF · Cache` na planilha → limpar expirado ou limpar tudo.  
+Funções: `limparCacheExpirado()`, `limparCacheTef()`.  
+Ajuste em `CONFIG.cache` no topo do `Codigo.gs`.
 
 ## Modos de busca
 
