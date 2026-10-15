@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta TEF - Lojas e Servidores | PDF Pagamentos Presenciais</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #F8FAFC;
+            --surface-color: rgba(255, 255, 255, 0.7);
+            --surface-solid: #FFFFFF;
+            --text-primary: #011E38;
+            --text-secondary: #475569;
+            --primary-color: #264FEC;
+            --primary-hover: #1E3EBA;
+            --success-color: #10B981;
+            --danger-color: #EF4444;
+            --warning-color: #F59E0B;
+            --border-color: rgba(1, 30, 56, 0.1);
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.05);
+            --glass-filter: blur(16px);
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --alert-bg: #FFF5F5;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0F172A;
+            --surface-color: rgba(30, 41, 59, 0.7);
+            --surface-solid: #1E293B;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --primary-color: #3B82F6;
+            --primary-hover: #60A5FA;
+            --border-color: rgba(255, 255, 255, 0.05);
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --alert-bg: rgba(239, 68, 68, 0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'IBM Plex Sans', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; width: 100%; }
+        h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+        p { line-height: 1.6; color: var(--text-secondary); }
+
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-4 { gap: 1rem; }
+        .mt-8 { margin-top: 2rem; }
+        .mb-4 { margin-bottom: 1rem; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Banner institucional Mooz / GB */
+        .mooz-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 32px;
+            background: linear-gradient(135deg, #011E38, #0B2B4A, #163B61);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border-bottom: 3px solid #10B981;
+        }
+
+        .mooz-banner-brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 120px;
+        }
+
+        .mooz-banner-brand img {
+            height: 48px;
+            object-fit: contain;
+            max-width: 180px;
+        }
+
+        .mooz-banner-title { text-align: center; flex: 1; }
+
+        .mooz-banner-title h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+
+        .mooz-banner-title h2 {
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.85);
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--surface-color);
+            backdrop-filter: var(--glass-filter);
+            -webkit-backdrop-filter: var(--glass-filter);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 0;
+            transition: var(--transition);
+        }
+
+        .nav-brand {
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .nav-links button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: var(--transition);
+            font-size: 0.88rem;
+        }
+
+        .nav-links button:hover,
+        .nav-links button.active {
+            color: var(--primary-color);
+            background: rgba(38, 79, 236, 0.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 15px rgba(38, 79, 236, 0.2);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(38, 79, 236, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-sm { padding: 8px 14px; font-size: 0.85rem; border-radius: 8px; }
+
+        .glass-card {
+            background: var(--surface-color);
+            backdrop-filter: var(--glass-filter);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 28px;
+        }
+
+        .search-panel {
+            max-width: 720px;
+            margin: 28px auto 12px;
+            padding: 20px;
+        }
+
+        .search-row {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        @media (min-width: 640px) {
+            .search-row { flex-direction: row; }
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: var(--surface-solid);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(38, 79, 236, 0.1);
+        }
+
+        .search-hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .cache-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px auto 0;
+            max-width: 900px;
+            padding: 10px 16px;
+            background: var(--surface-solid);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .cache-bar.visible { display: flex; }
+
+        .cache-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .cache-pill.hit {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success-color);
+        }
+
+        .cache-pill.bq {
+            background: rgba(38, 79, 236, 0.12);
+            color: var(--primary-color);
+        }
+
+        .cache-pill.stale {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+        }
+
+        .loader {
+            display: none;
+            width: 44px;
+            height: 44px;
+            margin: 40px auto;
+            border: 4px solid rgba(38, 79, 236, 0.15);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #dashboard { display: none; padding-bottom: 60px; }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .grid-layout { grid-template-columns: repeat(2, 1fr); }
+            .full-width { grid-column: span 2; }
+        }
+
+        .card-header { text-align: center; padding: 8px 0 4px; }
+        .store-code {
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+            word-break: break-all;
+        }
+        .franchise-name {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .location-meta {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .meta-chip {
+            background: var(--surface-solid);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .meta-chip strong { color: var(--text-primary); }
+
+        .panel h3 {
+            font-size: 1.15rem;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            background: var(--surface-solid);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .data-label { color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; }
+        .data-value { font-size: 1.05rem; font-weight: 700; text-align: right; }
+
+        .alert-critical {
+            background: var(--alert-bg);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+            padding: 14px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-red {
+            background: var(--alert-bg);
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .server-card {
+            background: var(--surface-solid);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 22px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .server-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .server-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .server-ip {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .server-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-top: 1px dashed var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .server-metric strong { color: var(--text-primary); font-size: 1.02rem; }
+
+        .mix-container {
+            width: 100%;
+            height: 32px;
+            background: #E2E8F0;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            margin: 16px 0 12px 0;
+        }
+
+        [data-theme="dark"] .mix-container { background: #334155; }
+
+        .mix-tef, .mix-pos {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 8px;
+            transition: width 0.8s ease;
+        }
+
+        .mix-tef { background: var(--primary-color); }
+        .mix-pos { background: #475569; }
+
+        .mix-legend {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--surface-solid);
+            border-radius: 12px;
+            font-size: 0.88rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot-tef { background: var(--primary-color); }
+        .dot-pos { background: #475569; }
+
+        .table-responsive-container {
+            max-height: 580px;
+            overflow: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .data-table th {
+            padding: 14px 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            background: var(--surface-solid);
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .data-table tr:hover { background: rgba(38, 79, 236, 0.05); }
+
+        .mini-mix-bar {
+            width: 100px;
+            height: 10px;
+            background: #E2E8F0;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .mini-mix-tef { background: var(--primary-color); height: 100%; }
+        .mini-mix-pos { background: #475569; height: 100%; }
+
+        .export-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            max-width: 920px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 16px; right: 16px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface-solid);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .close-modal:hover {
+            background: var(--danger-color);
+            color: #fff;
+            border-color: var(--danger-color);
+        }
+
+        .disclaimer-panel {
+            padding: 16px 20px;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-left: 4px solid var(--primary-color);
+            background: rgba(38, 79, 236, 0.04);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .disclaimer-panel b { color: var(--text-primary); }
+
+        .action-bar {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.35rem;
+            z-index: 1000;
+            border: 1px solid var(--border-color);
+            background: var(--surface-solid);
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+        }
+
+        .fab:hover { transform: scale(1.08); }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--primary-color);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.45s ease-out; }
+        .reveal.show { opacity: 1; transform: translateY(0); }
+
+        footer {
+            margin-top: auto;
+            background: #011E38;
+            padding: 20px 0;
+            color: #fff;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 0.82rem;
+            letter-spacing: 1.2px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .mock-notice {
+            background: var(--warning-color);
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mooz-banner {
+                flex-direction: column;
+                gap: 14px;
+                text-align: center;
+                padding: 16px 20px;
+            }
+            .mooz-banner-title h1 { font-size: 1.25rem; }
+            .nav-brand { display: none; }
+            .nav-links { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="mock-notice" class="mock-notice">
+        Você está no modo de pré-visualização local. O BigQuery está sendo simulado.
+    </div>
+
+    <header class="mooz-banner">
+        <div class="mooz-banner-brand">
+            <img src="https://somosmooz.com/wp-content/uploads/2020/08/MOOZ-marca_principal-verde-RGB-1-e1675433764515.png"
+                 alt="Logo MOOZ"
+                 onerror="this.style.display='none'">
+        </div>
+        <div class="mooz-banner-title">
+            <h1>Consulta de Lojas e Servidores TEF</h1>
+            <h2>PDF - Pagamentos Presenciais</h2>
+        </div>
+        <div class="mooz-banner-brand" style="justify-content:flex-end;">
+            <img src="https://minhaloja.quemdisseberenice.com.br/container/latest/images/brands-home-mld.png"
+                 alt="Logo Grupo Boticário"
+                 onerror="this.style.display='none'">
+        </div>
+    </header>
+
+    <nav>
+        <div class="container flex justify-between items-center">
+            <div class="nav-brand">
+                <span>Diagnóstico TEF/POS</span>
+            </div>
+            <div class="nav-links">
+                <button id="btnModeGlobal" class="active" onclick="setSearchMode('RESUMO_SERVIDORES')">Visão Global</button>
+                <button id="btnModeStore" onclick="setSearchMode('LOJA')">Por Loja(s)</button>
+                <button id="btnModeServer" onclick="setSearchMode('SERVIDOR')">Por Servidor</button>
+                <button id="btnModeUf" onclick="setSearchMode('UF')">Por UF</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container" style="padding-top: 8px; padding-bottom: 24px; flex: 1;">
+        <div id="searchPanel" class="glass-card search-panel fade-in" style="display:none;">
+            <div class="search-row" id="searchRowText">
+                <input type="text" id="searchInput" placeholder="" onkeypress="handleKeyPress(event)">
+                <button class="btn btn-primary" onclick="executeSearch()">Buscar</button>
+                <button class="btn btn-outline" onclick="executeSearch(null, null, true)" title="Ignora o cache e consulta o BigQuery">Atualizar</button>
+            </div>
+            <div class="search-row hidden" id="searchRowUf">
+                <select id="ufSelect" onchange="onUfSelectChange()">
+                    <option value="">Selecione a UF...</option>
+                    <option value="AC">AC - Acre</option>
+                    <option value="AL">AL - Alagoas</option>
+                    <option value="AP">AP - Amapá</option>
+                    <option value="AM">AM - Amazonas</option>
+                    <option value="BA">BA - Bahia</option>
+                    <option value="CE">CE - Ceará</option>
+                    <option value="DF">DF - Distrito Federal</option>
+                    <option value="ES">ES - Espírito Santo</option>
+                    <option value="GO">GO - Goiás</option>
+                    <option value="MA">MA - Maranhão</option>
+                    <option value="MT">MT - Mato Grosso</option>
+                    <option value="MS">MS - Mato Grosso do Sul</option>
+                    <option value="MG">MG - Minas Gerais</option>
+                    <option value="PA">PA - Pará</option>
+                    <option value="PB">PB - Paraíba</option>
+                    <option value="PR">PR - Paraná</option>
+                    <option value="PE">PE - Pernambuco</option>
+                    <option value="PI">PI - Piauí</option>
+                    <option value="RJ">RJ - Rio de Janeiro</option>
+                    <option value="RN">RN - Rio Grande do Norte</option>
+                    <option value="RS">RS - Rio Grande do Sul</option>
+                    <option value="RO">RO - Rondônia</option>
+                    <option value="RR">RR - Roraima</option>
+                    <option value="SC">SC - Santa Catarina</option>
+                    <option value="SP">SP - São Paulo</option>
+                    <option value="SE">SE - Sergipe</option>
+                    <option value="TO">TO - Tocantins</option>
+                </select>
+                <button class="btn btn-primary" onclick="executeSearch()">Buscar UF</button>
+                <button class="btn btn-outline" onclick="executeSearch(null, null, true)" title="Ignora o cache e consulta o BigQuery">Atualizar</button>
+            </div>
+            <div id="searchHint" class="search-hint"></div>
+        </div>
+
+        <div id="cacheBar" class="cache-bar">
+            <div id="cacheBarText"></div>
+            <button class="btn btn-outline btn-sm" onclick="executeSearch(null, null, true)">Atualizar da base</button>
+        </div>
+
+        <div class="loader" id="loader"></div>
+
+        <section id="dashboard">
+            <div id="renderArea" class="grid-layout"></div>
+            <div class="action-bar reveal" id="actionBar" style="display: none;">
+                <button class="btn btn-primary" id="btnCopy" onclick="copyDiagnostic()">Copiar Diagnóstico p/ Chamado</button>
+                <button class="btn btn-outline" onclick="resetSearch()">Nova Busca</button>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content" id="modalRenderBody">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+        </div>
+    </div>
+
+    <div class="fab" onclick="toggleTheme()" id="themeToggle" title="Alternar Tema">🌙</div>
+    <div class="toast" id="toastMessage">Copiado com sucesso!</div>
+
+    <footer>
+        <div class="container">
+            <span class="footer-text">GRUPO BOTICÁRIO TECH • PDF - PAGAMENTOS PRESENCIAIS</span>
+        </div>
+    </footer>
+
+    <script>
+        const root = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const isLocalMode = typeof google === 'undefined' || !google.script || !google.script.run;
+
+        function initTheme() {
+            let saved = 'light';
+            try { saved = localStorage.getItem('gb_theme') || 'light'; } catch (e) {}
+            root.setAttribute('data-theme', saved);
+            themeToggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+        }
+        initTheme();
+
+        function toggleTheme() {
+            const current = root.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', next);
+            try { localStorage.setItem('gb_theme', next); } catch (e) {}
+            themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+        }
+
+        if (isLocalMode) {
+            const notice = document.getElementById('mock-notice');
+            if (notice) notice.style.display = 'block';
+        }
+
+        const revealObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) entry.target.classList.add('show');
+            });
+        }, { threshold: 0.05 });
+
+        function observeElements() {
+            document.querySelectorAll('.reveal').forEach(function (el) {
+                revealObserver.observe(el);
+            });
+        }
+
+        let currentSearchMode = 'RESUMO_SERVIDORES';
+        let currentDataset = [];
+        let currentStoreData = null;
+        let currentCacheMeta = null;
+        let lastSearchTerm = '';
+
+        const modeButtons = {
+            RESUMO_SERVIDORES: 'btnModeGlobal',
+            LOJA: 'btnModeStore',
+            SERVIDOR: 'btnModeServer',
+            UF: 'btnModeUf'
+        };
+
+        function setSearchMode(mode) {
+            currentSearchMode = mode;
+            Object.keys(modeButtons).forEach(function (key) {
+                const btn = document.getElementById(modeButtons[key]);
+                if (btn) btn.classList.toggle('active', key === mode);
+            });
+
+            const input = document.getElementById('searchInput');
+            const hint = document.getElementById('searchHint');
+            const searchPanel = document.getElementById('searchPanel');
+            const rowText = document.getElementById('searchRowText');
+            const rowUf = document.getElementById('searchRowUf');
+            const dashboard = document.getElementById('dashboard');
+
+            if (mode === 'RESUMO_SERVIDORES') {
+                searchPanel.style.display = 'none';
+                hint.innerHTML = 'Clique em um card de servidor para listar as lojas ativas.';
+                executeSearch('', 'RESUMO_SERVIDORES');
+                return;
+            }
+
+            searchPanel.style.display = 'block';
+            dashboard.style.display = 'none';
+
+            if (mode === 'UF') {
+                rowText.classList.add('hidden');
+                rowUf.classList.remove('hidden');
+                document.getElementById('ufSelect').value = '';
+                hint.innerHTML = 'Selecione a UF para listar lojas ativas, servidores TEF e localização cadastral.';
+                return;
+            }
+
+            rowText.classList.remove('hidden');
+            rowUf.classList.add('hidden');
+            input.value = '';
+
+            if (mode === 'LOJA') {
+                input.placeholder = 'Ex: 9042, 2090; PS001045...';
+                hint.innerHTML = 'Múltiplas lojas podem ser separadas por vírgula (,) ou ponto e vírgula (;).';
+            } else {
+                input.placeholder = 'Ex: Sudeste 5 ou SIT2-BOTICF1-12...';
+                hint.innerHTML = 'Digite o nome da região ou o hostname SiTef do servidor.';
+            }
+            input.focus();
+        }
+
+        function onUfSelectChange() {
+            const uf = document.getElementById('ufSelect').value;
+            if (uf) executeSearch(uf, 'UF');
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') executeSearch();
+        }
+
+        function resetSearch() {
+            setSearchMode('LOJA');
+        }
+
+        function executeSearch(term, forcedMode, forceRefresh) {
+            const searchInput = document.getElementById('searchInput');
+            const mode = forcedMode || currentSearchMode;
+            let searchTerm;
+
+            if (term !== null && term !== undefined) {
+                searchTerm = term;
+            } else if (lastSearchTerm && forceRefresh) {
+                searchTerm = lastSearchTerm;
+            } else if (mode === 'UF') {
+                searchTerm = document.getElementById('ufSelect').value.trim();
+            } else if (mode === 'RESUMO_SERVIDORES') {
+                searchTerm = '';
+            } else {
+                searchTerm = searchInput.value.trim();
+            }
+
+            if (mode === 'UF' && !searchTerm) {
+                showToast('Selecione uma UF para buscar.');
+                return;
+            }
+            if ((mode === 'LOJA' || mode === 'SERVIDOR') && !searchTerm && forcedMode == null && !forceRefresh) {
+                showToast('Informe um termo para buscar.');
+                return;
+            }
+
+            if (term !== null && term !== undefined && searchInput && mode !== 'UF' && mode !== 'RESUMO_SERVIDORES') {
+                searchInput.value = term;
+            }
+            if (mode === 'UF' && searchTerm) {
+                document.getElementById('ufSelect').value = searchTerm;
+            }
+
+            lastSearchTerm = searchTerm;
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('actionBar').style.display = 'none';
+            hideCacheBar();
+
+            const force = forceRefresh === true;
+
+            if (!isLocalMode) {
+                google.script.run
+                    .withSuccessHandler(onSuccess)
+                    .withFailureHandler(onError)
+                    .searchStoreBigQuery(searchTerm, mode, force);
+            } else {
+                setTimeout(function () { mockDataRender(searchTerm, mode, force); }, 400);
+            }
+        }
+
+        function parseEnvelope(data) {
+            const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+            if (Array.isArray(parsed)) {
+                return { dataArray: parsed, meta: null };
+            }
+            return {
+                dataArray: (parsed && parsed.data) ? parsed.data : [],
+                meta: (parsed && parsed.meta) ? parsed.meta : null
+            };
+        }
+
+        function onSuccess(data) {
+            document.getElementById('loader').style.display = 'none';
+            const envelope = parseEnvelope(data);
+            currentDataset = envelope.dataArray || [];
+            currentCacheMeta = envelope.meta;
+            renderCacheBar(envelope.meta);
+            renderData(currentDataset);
+        }
+
+        function hideCacheBar() {
+            const bar = document.getElementById('cacheBar');
+            if (bar) bar.classList.remove('visible');
+        }
+
+        function renderCacheBar(meta) {
+            const bar = document.getElementById('cacheBar');
+            const text = document.getElementById('cacheBarText');
+            if (!bar || !text || !meta) {
+                hideCacheBar();
+                return;
+            }
+
+            let pillClass = 'bq';
+            let pillLabel = 'BigQuery';
+            if (meta.cache_status === 'HIT' || meta.source === 'cache') {
+                pillClass = 'hit';
+                pillLabel = 'Cache';
+            } else if (meta.cache_status === 'STALE_FALLBACK') {
+                pillClass = 'stale';
+                pillLabel = 'Cache D-2';
+            } else if (meta.cache_status === 'REFRESHED') {
+                pillClass = 'bq';
+                pillLabel = 'Atualizado';
+            } else if (meta.cache_status === 'STORED') {
+                pillClass = 'bq';
+                pillLabel = 'BQ → Cache';
+            }
+
+            const ref = meta.ref_date ? ('Ref. dados: ' + meta.ref_date) : '';
+            const at = meta.cached_at ? (' · Gerado: ' + meta.cached_at.replace('T', ' ')) : '';
+            const note = meta.note ? (' · ' + meta.note) : '';
+            const rows = meta.row_count != null ? (' · ' + meta.row_count + ' registro(s)') : '';
+
+            text.innerHTML =
+                '<span class="cache-pill ' + pillClass + '">' + pillLabel + '</span> ' +
+                '<span>' + escapeHtml(ref + at + rows + note) + '</span>';
+            bar.classList.add('visible');
+        }
+
+        function onError(errorMsg) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('renderArea').innerHTML =
+                '<div class="full-width alert-critical" style="justify-content:center;">Erro: ' + escapeHtml(String(errorMsg)) + '</div>';
+        }
+
+        function renderData(dataArray) {
+            const renderArea = document.getElementById('renderArea');
+            const actionBar = document.getElementById('actionBar');
+            document.getElementById('dashboard').style.display = 'block';
+            renderArea.innerHTML = '';
+
+            if (!dataArray || dataArray.length === 0) {
+                renderArea.innerHTML = '<div class="full-width glass-card panel" style="text-align:center;"><h3>Nenhum resultado encontrado para a busca.</h3></div>';
+                return;
+            }
+
+            if (dataArray[0].hasOwnProperty('qtd_lojas')) {
+                renderArea.innerHTML = generateServerCardsHTML(dataArray);
+                setTimeout(observeElements, 50);
+                return;
+            }
+
+            if (dataArray.length === 1 && currentSearchMode === 'LOJA') {
+                currentStoreData = dataArray[0];
+                renderArea.innerHTML = generateDashboardHTML(dataArray[0]);
+                actionBar.style.display = 'flex';
+                setTimeout(observeElements, 50);
+            } else {
+                renderArea.innerHTML = generateTableHTML(dataArray);
+                setTimeout(observeElements, 50);
+            }
+        }
+
+        function formatLocationLine(d) {
+            const parts = [];
+            if (d.cidade && d.cidade !== 'Não mapeada') parts.push(d.cidade);
+            if (d.uf && d.uf !== 'N/A') parts.push(d.uf);
+            return parts.length ? parts.join(' / ') : 'Localização não mapeada';
+        }
+
+        function generateServerCardsHTML(list) {
+            const formatMoney = function (val) {
+                return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val || 0);
+            };
+            const formatNum = function (val) {
+                return new Intl.NumberFormat('pt-BR').format(val || 0);
+            };
+
+            const cardsHTML = list.map(function (s) {
+                return '' +
+                    '<div class="server-card reveal show" onclick="drillDownServer(\'' + escapeAttr(s.nome_servidor) + '\')">' +
+                        '<div class="server-title">' + escapeHtml(s.nome_servidor) + '</div>' +
+                        '<div class="server-ip">' + escapeHtml(s.ip_servidor || 'N/A') + '</div>' +
+                        '<div class="server-metric"><span>Lojas Únicas (Ativas)</span><strong>' + formatNum(s.qtd_lojas) + '</strong></div>' +
+                        '<div class="server-metric"><span>Transações (30d)</span><strong>' + formatNum(s.total_transacoes) + '</strong></div>' +
+                        '<div class="server-metric" style="border-bottom:none;"><span>Volume TEF (30d)</span><strong style="color:var(--primary-color);">' + formatMoney(s.volume_financeiro) + '</strong></div>' +
+                    '</div>';
+            }).join('');
+
+            return '' +
+                '<div class="full-width glass-card panel reveal show">' +
+                    '<h3 style="margin-bottom:8px;">Panorama Global de Servidores TEF</h3>' +
+                    '<p style="margin-bottom:20px;font-size:0.95rem;">Visão consolidada dos últimos 30 dias. Clique em um servidor para listar suas lojas ativas.</p>' +
+                    '<div class="server-grid">' + cardsHTML + '</div>' +
+                '</div>';
+        }
+
+        function drillDownServer(serverName) {
+            setSearchMode('SERVIDOR');
+            document.getElementById('searchInput').value = serverName;
+            executeSearch(serverName, 'SERVIDOR');
+        }
+
+        function generateDashboardHTML(d) {
+            const isMultiServer = d.tef_multisservidor_mesmo_dia === 'SIM';
+            const serverAlertHTML = isMultiServer
+                ? '<div class="alert-critical"><b>ALERTA CRÍTICO:</b> Loja operou em 2+ servidores TEF no mesmo dia (' + escapeHtml(d.servidores_mesmo_dia || '') + '). Possível oscilação de link ou transbordo.</div>'
+                : '';
+
+            const migrationBadge = d.trocou_servidor_30d === 'SIM'
+                ? '<span class="status-badge badge-red">Migrou: ' + escapeHtml(d.nome_servidor_tef_anterior || 'Anterior') + ' → ' + escapeHtml(d.nome_servidor_tef_atual) + '</span>'
+                : '<span class="status-badge badge-green">Servidor Estável no Mês</span>';
+
+            const pctTef = parseFloat(d.pct_uso_tef_30d) || 0;
+            const pctPos = parseFloat(d.pct_uso_pos_30d) || 0;
+
+            return '' +
+                '<div class="full-width glass-card card-header reveal show">' +
+                    '<div class="store-code">' + escapeHtml(d.codloja_clean) + '</div>' +
+                    '<div class="franchise-name">' + escapeHtml(d.grupo_franquia || '') + '</div>' +
+                    '<div class="location-meta">' +
+                        '<span class="meta-chip"><strong>UF:</strong> ' + escapeHtml(d.uf || 'N/A') + '</span>' +
+                        '<span class="meta-chip"><strong>Cidade:</strong> ' + escapeHtml(d.cidade || 'Não mapeada') + '</span>' +
+                        '<span class="meta-chip"><strong>Bairro:</strong> ' + escapeHtml(d.bairro || 'Não mapeado') + '</span>' +
+                        '<span class="meta-chip"><strong>Tipo:</strong> ' + escapeHtml(d.tipo_loja || 'Não informado') + '</span>' +
+                        '<span class="meta-chip"><strong>Modelo:</strong> ' + escapeHtml(d.modelo_loja || 'Não informado') + '</span>' +
+                    '</div>' +
+                '</div>' +
+
+                '<div class="glass-card panel reveal show">' +
+                    '<h3>Diagnóstico Servidor TEF</h3>' +
+                    '<div class="data-row"><span class="data-label">Servidor Atual</span><span class="data-value">' + escapeHtml(d.nome_servidor_tef_atual) + '</span></div>' +
+                    '<div class="data-row"><span class="data-label">IP (SiTef)</span><span class="data-value">' + escapeHtml(d.cod_ip_sitef_tef_atual || 'N/A') + '</span></div>' +
+                    '<div class="data-row"><span class="data-label">Regional Cadastro</span><span class="data-value">' + escapeHtml(d.regional || 'Não informado') + '</span></div>' +
+                    '<div style="margin-top:16px;text-align:right;">' + migrationBadge + '</div>' +
+                    serverAlertHTML +
+                    '<div id="terminalsContainer_' + escapeAttr(d.codloja_clean) + '" style="margin-top:16px;display:none;"></div>' +
+                    '<button class="btn btn-outline btn-sm" style="margin-top:16px;width:100%;border-style:dashed;" onclick="fetchTerminals(\'' + escapeAttr(d.codloja_clean) + '\')">Inspecionar PDVs (Terminais)</button>' +
+                '</div>' +
+
+                '<div class="glass-card panel reveal show">' +
+                    '<h3>Roteamento de Pagamentos</h3>' +
+                    '<div class="data-row"><span class="data-label">Adquirente Cartões</span><span class="data-value" style="color:var(--primary-color);">' + escapeHtml(d.adquirente_cartao_principal) + '</span></div>' +
+                    '<div class="data-row"><span class="data-label">PSP Pix Primário</span><span class="data-value" style="color:var(--success-color);">' + escapeHtml(d.psp_primario_pix) + '</span></div>' +
+                    '<div class="data-row" style="margin-top:20px;"><span class="data-label">Taxa de Aprovação (30d)</span><span class="data-value">' + escapeHtml(String(d.pct_aprovacao_30d)) + '%</span></div>' +
+                '</div>' +
+
+                '<div class="full-width glass-card panel reveal show">' +
+                    '<h3>Mix de Canais (TEF vs POS)</h3>' +
+                    '<div class="mix-container">' +
+                        '<div class="mix-tef" style="width:' + (pctTef > 0 ? pctTef : 0) + '%">' + (pctTef >= 8 ? pctTef.toFixed(1) + '%' : '') + '</div>' +
+                        '<div class="mix-pos" style="width:' + (pctPos > 0 ? pctPos : 0) + '%">' + (pctPos >= 8 ? pctPos.toFixed(1) + '%' : '') + '</div>' +
+                    '</div>' +
+                    '<div class="mix-legend">' +
+                        '<div class="legend-item"><span class="dot dot-tef"></span> <b>TEF:</b> ' + pctTef + '% (' + (d.tx_tef_30d || 0) + ' txs - R$ ' + (d.volume_tef_30d || 0) + ')</div>' +
+                        '<div class="legend-item"><span class="dot dot-pos"></span> <b>POS:</b> ' + pctPos + '% (' + (d.tx_pos_30d || 0) + ' txs - R$ ' + (d.volume_pos_30d || 0) + ')</div>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function generateTableHTML(list) {
+            const modeLabel = currentSearchMode === 'UF'
+                ? 'Lojas na UF'
+                : (currentSearchMode === 'SERVIDOR' ? 'Lojas no Servidor' : 'Lojas Encontradas');
+
+            const rows = list.map(function (d, index) {
+                const pctTef = parseFloat(d.pct_uso_tef_30d) || 0;
+                const pctPos = parseFloat(d.pct_uso_pos_30d) || 0;
+                const isMulti = d.tef_multisservidor_mesmo_dia === 'SIM';
+                const isMigrated = d.trocou_servidor_30d === 'SIM';
+
+                let statusBadge = isMulti
+                    ? '<span class="status-badge badge-red" title="' + escapeAttr(d.servidores_mesmo_dia || '') + '" style="margin-bottom:4px;">IP Oscilando</span><br>'
+                    : (isMigrated
+                        ? '<span class="status-badge badge-red" style="margin-bottom:4px;">Migrou</span><br>'
+                        : '<span class="status-badge badge-green" style="margin-bottom:4px;">Estável</span><br>');
+
+                const pdvBadge = d.pdvs_roteamento_divergente === 'SIM'
+                    ? '<span class="status-badge badge-red">PDVs Divergentes</span>'
+                    : '';
+
+                return '' +
+                    '<tr>' +
+                        '<td>' +
+                            '<strong style="color:var(--primary-color);font-size:1rem;">' + escapeHtml(d.codloja_clean) + '</strong><br>' +
+                            '<span style="font-size:0.8rem;color:var(--text-secondary);">' + escapeHtml(d.grupo_franquia || '') + '</span>' +
+                        '</td>' +
+                        '<td>' +
+                            '<b>' + escapeHtml(d.uf || 'N/A') + '</b> · ' + escapeHtml(d.cidade || '-') + '<br>' +
+                            '<span style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(d.bairro || '') + '</span><br>' +
+                            '<span style="font-size:0.72rem;color:var(--text-secondary);">' + escapeHtml(d.tipo_loja || '') + (d.modelo_loja && d.modelo_loja !== 'Não informado' ? ' · ' + escapeHtml(d.modelo_loja) : '') + '</span>' +
+                        '</td>' +
+                        '<td>' +
+                            '<b>' + escapeHtml(d.nome_servidor_tef_atual) + '</b><br>' +
+                            '<span style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(d.cod_ip_sitef_tef_atual || 'N/A') + '</span>' +
+                        '</td>' +
+                        '<td>' + statusBadge + pdvBadge + '</td>' +
+                        '<td>' +
+                            '<span style="font-weight:600;color:var(--primary-color);">' + escapeHtml(d.adquirente_cartao_principal) + '</span> | ' +
+                            '<span style="font-weight:600;color:var(--success-color);">' + escapeHtml(d.psp_primario_pix) + '</span>' +
+                        '</td>' +
+                        '<td>' +
+                            '<div style="display:flex;align-items:center;gap:8px;">' +
+                                '<div class="mini-mix-bar">' +
+                                    '<div class="mini-mix-tef" style="width:' + pctTef + '%"></div>' +
+                                    '<div class="mini-mix-pos" style="width:' + pctPos + '%"></div>' +
+                                '</div>' +
+                                '<span style="font-size:0.8rem;font-weight:600;">' + pctTef.toFixed(0) + '% TEF</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td><button class="btn btn-outline btn-sm" onclick="openDetailModal(' + index + ')">Detalhes</button></td>' +
+                    '</tr>';
+            }).join('');
+
+            return '' +
+                '<div class="full-width glass-card panel reveal show">' +
+                    '<div class="export-bar">' +
+                        '<div>' +
+                            '<h3 style="margin-bottom:4px;border:none;padding:0;">' + modeLabel + ' (' + list.length + ')</h3>' +
+                            '<span style="font-size:0.85rem;color:var(--text-secondary);">Roteamento TEF + localização cadastral • PDF Pagamentos Presenciais</span>' +
+                        '</div>' +
+                        '<div class="export-btns">' +
+                            '<button class="btn btn-outline btn-sm" onclick="exportToCSV()">CSV</button>' +
+                            '<button class="btn btn-outline btn-sm" onclick="copyTableJira()">Tabela Jira</button>' +
+                            '<button class="btn btn-primary btn-sm" onclick="copyBulkFiservTickets()">Lote Fiserv</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="table-responsive-container">' +
+                        '<table class="data-table">' +
+                            '<thead><tr>' +
+                                '<th>Loja / Franquia</th>' +
+                                '<th>Localização / Tipo</th>' +
+                                '<th>Servidor TEF</th>' +
+                                '<th>Estabilidade</th>' +
+                                '<th>Cartão / Pix</th>' +
+                                '<th>Mix TEF</th>' +
+                                '<th>Ação</th>' +
+                            '</tr></thead>' +
+                            '<tbody>' + rows + '</tbody>' +
+                        '</table>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="full-width disclaimer-panel reveal show">' +
+                    '<div><b>Regra de Governança & Base de Dados (PDF - Pagamentos Presenciais):</b></div>' +
+                    '<div>• Janela do Histórico: últimos 30 dias fechados (D-30 até D-1).</div>' +
+                    '<div>• Transações: <code>tb_entradas_transacoes_loja_fisica</code> e <code>tb_transacoes_cartao_pix</code>.</div>' +
+                    '<div>• Cadastro / localização: <code>tb_canal_loja_geral_ttd</code> (join por cod_franquia normalizado).</div>' +
+                '</div>';
+        }
+
+        function openDetailModal(index) {
+            const data = currentDataset[index];
+            currentStoreData = data;
+            const modal = document.getElementById('detailModal');
+            const renderBody = document.getElementById('modalRenderBody');
+
+            renderBody.innerHTML =
+                '<span class="close-modal" onclick="closeModal()">&times;</span>' +
+                '<div style="margin-top:10px;">' +
+                    generateDashboardHTML(data) +
+                    '<div style="text-align:center;margin-top:24px;">' +
+                        '<button class="btn btn-primary" onclick="copyDiagnostic()">Copiar Diagnóstico Completo</button>' +
+                    '</div>' +
+                '</div>';
+
+            modal.style.display = 'flex';
+            renderBody.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('show'); });
+
+            if (data.pdvs_roteamento_divergente === 'SIM') {
+                setTimeout(function () { fetchTerminals(data.codloja_clean); }, 300);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastMessage');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 3000);
+        }
+
+        function copyDiagnostic() {
+            if (!currentStoreData) return;
+            const d = currentStoreData;
+            const jiraText = [
+                '*DIAGNÓSTICO DE INFRAESTRUTURA TEF/POS (PDF - PAGAMENTOS PRESENCIAIS)*',
+                '*Loja:* ' + d.codloja_clean + ' - ' + (d.grupo_franquia || ''),
+                '*Localização:* ' + formatLocationLine(d),
+                '*Bairro:* ' + (d.bairro || 'N/A'),
+                '*Tipo de Local (PDV):* ' + (d.tipo_loja || 'N/A'),
+                '*Modelo:* ' + (d.modelo_loja || 'N/A'),
+                '*Servidor TEF Atual:* ' + d.nome_servidor_tef_atual + ' (IP: ' + (d.cod_ip_sitef_tef_atual || 'N/A') + ')',
+                '*Estabilidade (30d):* ' + (d.trocou_servidor_30d === 'SIM' ? 'Migrou de Servidor' : 'Estável'),
+                '*Alerta Múltiplos IPs (Mesmo dia):* ' + d.tef_multisservidor_mesmo_dia + (d.tef_multisservidor_mesmo_dia === 'SIM' ? ' (' + (d.servidores_mesmo_dia || '') + ')' : ''),
+                '*Adquirente Principal:* ' + d.adquirente_cartao_principal,
+                '*PSP Pix:* ' + d.psp_primario_pix,
+                '*Dependência TEF/POS:* ' + d.pct_uso_tef_30d + '% TEF | ' + d.pct_uso_pos_30d + '% POS',
+                '*Volume Total (30d):* R$ ' + d.volume_financeiro_30d + ' (' + d.total_transacoes_30d + ' txs)'
+            ].join('\n');
+
+            copyTextToClipboard(jiraText, 'Diagnóstico formatado copiado!');
+        }
+
+        function copyBulkFiservTickets() {
+            if (!currentDataset || currentDataset.length === 0) return;
+            const text = currentDataset.map(function (d) {
+                return d.codloja_clean + ' - ' + (d.cod_ip_sitef_tef_atual || 'N/A') + ' (' + d.nome_servidor_tef_atual + ') | ' + formatLocationLine(d);
+            }).join('\n');
+            copyTextToClipboard(text, 'Lote Fiserv copiado!');
+        }
+
+        function fetchTerminals(storeCode) {
+            const container = document.getElementById('terminalsContainer_' + storeCode);
+            if (!container) return;
+            container.style.display = 'block';
+            container.innerHTML = '<div class="loader" style="display:block;width:24px;height:24px;border-width:3px;margin:10px auto;"></div>';
+
+            if (!isLocalMode) {
+                google.script.run
+                    .withSuccessHandler(function (data) { renderTerminals(data, storeCode); })
+                    .withFailureHandler(function (err) {
+                        container.innerHTML = '<span style="color:var(--danger-color);font-size:0.85rem;">Erro: ' + escapeHtml(String(err)) + '</span>';
+                    })
+                    .searchStoreBigQuery(storeCode, 'TERMINAIS_LOJA', false);
+            } else {
+                setTimeout(function () {
+                    renderTerminals(JSON.stringify({
+                        data: [
+                            { cod_pdv: '001', ip_servidor: 'SIT2-BOTICF1-12', nome_servidor: 'Sudeste 5', qtd_transacoes: 1500 },
+                            { cod_pdv: '002', ip_servidor: 'SIT2-BOTICF1-14', nome_servidor: 'Sudeste 7', qtd_transacoes: 50 }
+                        ],
+                        meta: { source: 'cache', cache_status: 'HIT' }
+                    }), storeCode);
+                }, 700);
+            }
+        }
+
+        function renderTerminals(dataStr, storeCode) {
+            const container = document.getElementById('terminalsContainer_' + storeCode);
+            if (!container) return;
+            const envelope = parseEnvelope(dataStr);
+            const data = envelope.dataArray;
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="text-align:center;font-size:0.85rem;color:var(--text-secondary);padding:12px;border:1px dashed var(--border-color);border-radius:8px;">Nenhum PDV TEF encontrado.</div>';
+                return;
+            }
+
+            const servers = new Set(data.map(function (d) { return d.nome_servidor; }));
+            let alertHtml = '';
+            if (servers.size > 1) {
+                alertHtml = '<div class="alert-critical" style="padding:10px;font-size:0.85rem;margin-bottom:12px;margin-top:0;display:block;text-align:center;"><b>Roteamento Dividido:</b> PDVs apontando para servidores diferentes!</div>';
+            }
+
+            let tableHtml = alertHtml +
+                '<div style="max-height:250px;overflow-y:auto;border:1px solid var(--border-color);border-radius:8px;">' +
+                '<table class="data-table" style="font-size:0.8rem;margin:0;">' +
+                '<thead><tr><th style="padding:8px 12px;">PDV</th><th style="padding:8px 12px;">Servidor / IP</th><th style="padding:8px 12px;text-align:center;">Txs</th></tr></thead><tbody>';
+
+            data.forEach(function (d) {
+                tableHtml +=
+                    '<tr>' +
+                        '<td style="padding:8px 12px;"><strong>' + escapeHtml(d.cod_pdv || 'N/A') + '</strong></td>' +
+                        '<td style="padding:8px 12px;">' + escapeHtml(d.nome_servidor) + '<br><span style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(d.ip_servidor) + '</span></td>' +
+                        '<td style="padding:8px 12px;text-align:center;">' + escapeHtml(String(d.qtd_transacoes)) + '</td>' +
+                    '</tr>';
+            });
+
+            tableHtml += '</tbody></table></div>';
+            container.innerHTML = tableHtml;
+        }
+
+        function copyTextToClipboard(text, successMsg) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    showToast(successMsg);
+                }).catch(function () {
+                    fallbackCopy(text, successMsg);
+                });
+            } else {
+                fallbackCopy(text, successMsg);
+            }
+        }
+
+        function fallbackCopy(text, successMsg) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showToast(successMsg);
+        }
+
+        function exportToCSV() {
+            if (!currentDataset || currentDataset.length === 0) return;
+
+            const headers = [
+                'Loja', 'Grupo Franquia', 'UF', 'Cidade', 'Bairro', 'Tipo Local', 'Modelo', 'Regional',
+                'Servidor TEF', 'IP SiTef', 'Troca 30d', 'Multi Servidor Dia', 'PDVs Divergentes',
+                'Adquirente', 'PSP Pix', 'Tx Aprov %', 'Total Tx', '% TEF', '% POS', 'Vol R$'
+            ];
+            const csvRows = [headers.join(',')];
+
+            currentDataset.forEach(function (d) {
+                const row = [
+                    csvCell(d.codloja_clean),
+                    csvCell(d.grupo_franquia),
+                    csvCell(d.uf),
+                    csvCell(d.cidade),
+                    csvCell(d.bairro),
+                    csvCell(d.tipo_loja),
+                    csvCell(d.modelo_loja),
+                    csvCell(d.regional),
+                    csvCell(d.nome_servidor_tef_atual),
+                    csvCell(d.cod_ip_sitef_tef_atual),
+                    csvCell(d.trocou_servidor_30d),
+                    csvCell(d.tef_multisservidor_mesmo_dia),
+                    csvCell(d.pdvs_roteamento_divergente),
+                    csvCell(d.adquirente_cartao_principal),
+                    csvCell(d.psp_primario_pix),
+                    csvCell(d.pct_aprovacao_30d),
+                    csvCell(d.total_transacoes_30d),
+                    csvCell(d.pct_uso_tef_30d),
+                    csvCell(d.pct_uso_pos_30d),
+                    csvCell(d.volume_financeiro_30d)
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'diagnostico_tef_pos_' + new Date().toISOString().slice(0, 10) + '.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function csvCell(value) {
+            return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+        }
+
+        function copyTableJira() {
+            if (!currentDataset || currentDataset.length === 0) return;
+            let markdown = '||Loja||Franquia||UF||Cidade||Bairro||Tipo Local||Servidor TEF||IP||Adquirente||PSP Pix||% TEF||\n';
+            currentDataset.forEach(function (d) {
+                markdown += '|' + d.codloja_clean +
+                    '|' + (d.grupo_franquia || '') +
+                    '|' + (d.uf || '') +
+                    '|' + (d.cidade || '') +
+                    '|' + (d.bairro || '') +
+                    '|' + (d.tipo_loja || '') +
+                    '|' + d.nome_servidor_tef_atual +
+                    '|' + (d.cod_ip_sitef_tef_atual || 'N/A') +
+                    '|' + d.adquirente_cartao_principal +
+                    '|' + d.psp_primario_pix +
+                    '|' + d.pct_uso_tef_30d + '%|\n';
+            });
+            copyTextToClipboard(markdown, 'Tabela copiada em formato Jira!');
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value).replace(/\\/g, '\\\\');
+        }
+
+        function mockStore(overrides) {
+            return Object.assign({
+                codloja_clean: '00009042',
+                grupo_franquia: 'CP NOVAERA',
+                uf: 'SP',
+                cidade: 'São Paulo',
+                bairro: 'Bela Vista',
+                tipo_loja: 'Shopping',
+                modelo_loja: 'Boti Classic',
+                regional: 'Sudeste',
+                nome_servidor_tef_atual: 'Sudeste 5',
+                cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-12',
+                trocou_servidor_30d: 'NÃO',
+                nome_servidor_tef_anterior: 'Sem Troca',
+                tef_multisservidor_mesmo_dia: 'NÃO',
+                servidores_mesmo_dia: 'Nenhum',
+                pdvs_roteamento_divergente: 'NÃO',
+                adquirente_cartao_principal: 'Cielo',
+                psp_primario_pix: 'SANTANDER',
+                pct_aprovacao_30d: 95.81,
+                total_transacoes_30d: 3751,
+                pct_uso_tef_30d: 99.97,
+                pct_uso_pos_30d: 0.03,
+                volume_financeiro_30d: 657419.06,
+                tx_tef_30d: 3750,
+                tx_pos_30d: 1,
+                volume_tef_30d: 657221.30,
+                volume_pos_30d: 197.76
+            }, overrides || {});
+        }
+
+        function mockEnvelope(dataArray, force) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const ref = yesterday.toISOString().slice(0, 10);
+            return {
+                data: dataArray,
+                meta: {
+                    source: force ? 'bigquery' : 'cache',
+                    cache_status: force ? 'REFRESHED' : 'HIT',
+                    ref_date: ref,
+                    cached_at: new Date().toISOString().slice(0, 19),
+                    row_count: dataArray.length
+                }
+            };
+        }
+
+        function mockDataRender(term, mode, force) {
+            if (mode === 'RESUMO_SERVIDORES') {
+                onSuccess(mockEnvelope([
+                    { nome_servidor: 'Sudeste 5', ip_servidor: 'SIT2-BOTICF1-12', qtd_lojas: 1245, total_transacoes: 1450300, volume_financeiro: 215400000.50 },
+                    { nome_servidor: 'Sudeste 7', ip_servidor: 'SIT2-BOTICF1-14', qtd_lojas: 890, total_transacoes: 980500, volume_financeiro: 132100000.00 },
+                    { nome_servidor: 'Sul 2', ip_servidor: 'SIT2-BOTICF1-18', qtd_lojas: 650, total_transacoes: 720000, volume_financeiro: 98500000.00 },
+                    { nome_servidor: 'Nordeste 1', ip_servidor: 'SIT2-BOTICF1-03', qtd_lojas: 410, total_transacoes: 350000, volume_financeiro: 45000000.00 }
+                ], force));
+                return;
+            }
+
+            if (mode === 'UF') {
+                const uf = (term || 'SP').toUpperCase();
+                onSuccess(mockEnvelope([
+                    mockStore({ uf: uf, cidade: uf === 'RJ' ? 'Rio de Janeiro' : 'São Paulo', tipo_loja: 'Shopping' }),
+                    mockStore({
+                        codloja_clean: '00001045',
+                        grupo_franquia: 'Franquia Litoral',
+                        uf: uf,
+                        cidade: uf === 'RJ' ? 'Niterói' : 'Campinas',
+                        bairro: 'Centro',
+                        tipo_loja: 'Rua',
+                        modelo_loja: 'Boti Classic',
+                        nome_servidor_tef_atual: 'Sudeste 7',
+                        cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-14',
+                        pdvs_roteamento_divergente: 'SIM',
+                        pct_uso_tef_30d: 92,
+                        pct_uso_pos_30d: 8
+                    })
+                ], force));
+                return;
+            }
+
+            if (mode === 'SERVIDOR') {
+                onSuccess(mockEnvelope([
+                    mockStore({ nome_servidor_tef_atual: String(term || 'Sudeste 5').toUpperCase() }),
+                    mockStore({
+                        codloja_clean: '00001045',
+                        grupo_franquia: 'Franquia RJ Litoral',
+                        uf: 'RJ',
+                        cidade: 'Niterói',
+                        bairro: 'Centro',
+                        tipo_loja: 'Rua',
+                        modelo_loja: 'Boti Classic',
+                        nome_servidor_tef_atual: String(term || 'Sudeste 5').toUpperCase(),
+                        pdvs_roteamento_divergente: 'SIM'
+                    })
+                ], force));
+                return;
+            }
+
+            if (!term) term = '9042, 1045';
+            const terms = term.split(/[,;\n]+/).map(function (t) { return t.trim(); }).filter(Boolean);
+
+            if (terms.length > 1) {
+                onSuccess(mockEnvelope(terms.map(function (t, idx) {
+                    return mockStore({
+                        codloja_clean: t.replace(/^(ES|PS)/i, '').padStart(8, '0'),
+                        grupo_franquia: 'Franquia (' + t + ')',
+                        uf: idx % 2 === 0 ? 'SP' : 'PR',
+                        cidade: idx % 2 === 0 ? 'São Paulo' : 'Curitiba',
+                        bairro: idx % 2 === 0 ? 'Bela Vista' : 'Batel',
+                        tipo_loja: idx % 2 === 0 ? 'Shopping' : 'Rua',
+                        modelo_loja: idx % 2 === 0 ? 'Boti Classic' : 'PlayOff',
+                        nome_servidor_tef_atual: idx % 2 === 0 ? 'Sudeste 5' : 'Sul 2',
+                        cod_ip_sitef_tef_atual: idx % 2 === 0 ? 'SIT2-BOTICF1-12' : 'SIT2-BOTICF1-18',
+                        trocou_servidor_30d: idx % 2 === 0 ? 'NÃO' : 'SIM',
+                        tef_multisservidor_mesmo_dia: idx % 2 === 0 ? 'NÃO' : 'SIM',
+                        servidores_mesmo_dia: idx % 2 === 0 ? 'Nenhum' : 'Sul 2 | Sul 1',
+                        pdvs_roteamento_divergente: idx % 2 === 0 ? 'NÃO' : 'SIM'
+                    });
+                }), force));
+                return;
+            }
+
+            onSuccess(mockEnvelope([mockStore({
+                codloja_clean: term.replace(/^(ES|PS)/i, '').padStart(8, '0'),
+                grupo_franquia: 'Franquia (' + term + ')',
+                uf: 'PR',
+                cidade: 'Curitiba',
+                bairro: 'Batel',
+                tipo_loja: 'Shopping',
+                modelo_loja: 'Boti Classic',
+                nome_servidor_tef_atual: 'Sul 2',
+                cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-18',
+                trocou_servidor_30d: 'SIM',
+                nome_servidor_tef_anterior: 'Sul 1',
+                tef_multisservidor_mesmo_dia: 'SIM',
+                servidores_mesmo_dia: 'Sul 2 | Sul 1',
+                pdvs_roteamento_divergente: 'SIM',
+                pct_uso_tef_30d: 60,
+                pct_uso_pos_30d: 40
+            })], force));
+        }
+
+        window.onload = function () {
+            setSearchMode('RESUMO_SERVIDORES');
+        };
+    </script>
+</body>
+</html>
