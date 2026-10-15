@@ -1030,8 +1030,9 @@
                     '<div class="location-meta">' +
                         '<span class="meta-chip"><strong>UF:</strong> ' + escapeHtml(d.uf || 'N/A') + '</span>' +
                         '<span class="meta-chip"><strong>Cidade:</strong> ' + escapeHtml(d.cidade || 'Não mapeada') + '</span>' +
+                        '<span class="meta-chip"><strong>Bairro:</strong> ' + escapeHtml(d.bairro || 'Não mapeado') + '</span>' +
                         '<span class="meta-chip"><strong>Tipo:</strong> ' + escapeHtml(d.tipo_loja || 'Não informado') + '</span>' +
-                        '<span class="meta-chip"><strong>Endereço:</strong> ' + escapeHtml(d.endereco || 'Não mapeado') + '</span>' +
+                        '<span class="meta-chip"><strong>Modelo:</strong> ' + escapeHtml(d.modelo_loja || 'Não informado') + '</span>' +
                     '</div>' +
                 '</div>' +
 
@@ -1095,8 +1096,8 @@
                         '</td>' +
                         '<td>' +
                             '<b>' + escapeHtml(d.uf || 'N/A') + '</b> · ' + escapeHtml(d.cidade || '-') + '<br>' +
-                            '<span style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(d.tipo_loja || '') + '</span><br>' +
-                            '<span style="font-size:0.72rem;color:var(--text-secondary);">' + escapeHtml(d.endereco || '') + '</span>' +
+                            '<span style="font-size:0.75rem;color:var(--text-secondary);">' + escapeHtml(d.bairro || '') + '</span><br>' +
+                            '<span style="font-size:0.72rem;color:var(--text-secondary);">' + escapeHtml(d.tipo_loja || '') + (d.modelo_loja && d.modelo_loja !== 'Não informado' ? ' · ' + escapeHtml(d.modelo_loja) : '') + '</span>' +
                         '</td>' +
                         '<td>' +
                             '<b>' + escapeHtml(d.nome_servidor_tef_atual) + '</b><br>' +
@@ -1197,8 +1198,9 @@
                 '*DIAGNÓSTICO DE INFRAESTRUTURA TEF/POS (PDF - PAGAMENTOS PRESENCIAIS)*',
                 '*Loja:* ' + d.codloja_clean + ' - ' + (d.grupo_franquia || ''),
                 '*Localização:* ' + formatLocationLine(d),
-                '*Endereço:* ' + (d.endereco || 'N/A'),
-                '*Tipo de Loja:* ' + (d.tipo_loja || 'N/A'),
+                '*Bairro:* ' + (d.bairro || 'N/A'),
+                '*Tipo de Local (PDV):* ' + (d.tipo_loja || 'N/A'),
+                '*Modelo:* ' + (d.modelo_loja || 'N/A'),
                 '*Servidor TEF Atual:* ' + d.nome_servidor_tef_atual + ' (IP: ' + (d.cod_ip_sitef_tef_atual || 'N/A') + ')',
                 '*Estabilidade (30d):* ' + (d.trocou_servidor_30d === 'SIM' ? 'Migrou de Servidor' : 'Estável'),
                 '*Alerta Múltiplos IPs (Mesmo dia):* ' + d.tef_multisservidor_mesmo_dia + (d.tef_multisservidor_mesmo_dia === 'SIM' ? ' (' + (d.servidores_mesmo_dia || '') + ')' : ''),
@@ -1302,7 +1304,7 @@
             if (!currentDataset || currentDataset.length === 0) return;
 
             const headers = [
-                'Loja', 'Grupo Franquia', 'UF', 'Cidade', 'Endereco', 'Tipo Loja', 'Regional',
+                'Loja', 'Grupo Franquia', 'UF', 'Cidade', 'Bairro', 'Tipo Local', 'Modelo', 'Regional',
                 'Servidor TEF', 'IP SiTef', 'Troca 30d', 'Multi Servidor Dia', 'PDVs Divergentes',
                 'Adquirente', 'PSP Pix', 'Tx Aprov %', 'Total Tx', '% TEF', '% POS', 'Vol R$'
             ];
@@ -1314,8 +1316,9 @@
                     csvCell(d.grupo_franquia),
                     csvCell(d.uf),
                     csvCell(d.cidade),
-                    csvCell(d.endereco),
+                    csvCell(d.bairro),
                     csvCell(d.tipo_loja),
+                    csvCell(d.modelo_loja),
                     csvCell(d.regional),
                     csvCell(d.nome_servidor_tef_atual),
                     csvCell(d.cod_ip_sitef_tef_atual),
@@ -1349,12 +1352,13 @@
 
         function copyTableJira() {
             if (!currentDataset || currentDataset.length === 0) return;
-            let markdown = '||Loja||Franquia||UF||Cidade||Tipo||Servidor TEF||IP||Adquirente||PSP Pix||% TEF||\n';
+            let markdown = '||Loja||Franquia||UF||Cidade||Bairro||Tipo Local||Servidor TEF||IP||Adquirente||PSP Pix||% TEF||\n';
             currentDataset.forEach(function (d) {
                 markdown += '|' + d.codloja_clean +
                     '|' + (d.grupo_franquia || '') +
                     '|' + (d.uf || '') +
                     '|' + (d.cidade || '') +
+                    '|' + (d.bairro || '') +
                     '|' + (d.tipo_loja || '') +
                     '|' + d.nome_servidor_tef_atual +
                     '|' + (d.cod_ip_sitef_tef_atual || 'N/A') +
@@ -1384,8 +1388,9 @@
                 grupo_franquia: 'CP NOVAERA',
                 uf: 'SP',
                 cidade: 'São Paulo',
-                endereco: 'Av. Paulista, 1000 - Bela Vista',
+                bairro: 'Bela Vista',
                 tipo_loja: 'Shopping',
+                modelo_loja: 'Boti Classic',
                 regional: 'Sudeste',
                 nome_servidor_tef_atual: 'Sudeste 5',
                 cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-12',
@@ -1428,8 +1433,9 @@
                         grupo_franquia: 'Franquia Litoral',
                         uf: uf,
                         cidade: uf === 'RJ' ? 'Niterói' : 'Campinas',
-                        endereco: 'Rua das Flores, 120',
+                        bairro: 'Centro',
                         tipo_loja: 'Rua',
+                        modelo_loja: 'Boti Classic',
                         nome_servidor_tef_atual: 'Sudeste 7',
                         cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-14',
                         pdvs_roteamento_divergente: 'SIM',
@@ -1448,8 +1454,9 @@
                         grupo_franquia: 'Franquia RJ Litoral',
                         uf: 'RJ',
                         cidade: 'Niterói',
-                        endereco: 'Av. Amaral Peixoto, 50',
+                        bairro: 'Centro',
                         tipo_loja: 'Rua',
+                        modelo_loja: 'Boti Classic',
                         nome_servidor_tef_atual: String(term || 'Sudeste 5').toUpperCase(),
                         pdvs_roteamento_divergente: 'SIM'
                     })
@@ -1467,7 +1474,9 @@
                         grupo_franquia: 'Franquia (' + t + ')',
                         uf: idx % 2 === 0 ? 'SP' : 'PR',
                         cidade: idx % 2 === 0 ? 'São Paulo' : 'Curitiba',
+                        bairro: idx % 2 === 0 ? 'Bela Vista' : 'Batel',
                         tipo_loja: idx % 2 === 0 ? 'Shopping' : 'Rua',
+                        modelo_loja: idx % 2 === 0 ? 'Boti Classic' : 'PlayOff',
                         nome_servidor_tef_atual: idx % 2 === 0 ? 'Sudeste 5' : 'Sul 2',
                         cod_ip_sitef_tef_atual: idx % 2 === 0 ? 'SIT2-BOTICF1-12' : 'SIT2-BOTICF1-18',
                         trocou_servidor_30d: idx % 2 === 0 ? 'NÃO' : 'SIM',
@@ -1484,8 +1493,9 @@
                 grupo_franquia: 'Franquia (' + term + ')',
                 uf: 'PR',
                 cidade: 'Curitiba',
-                endereco: 'Shopping Mueller - Loja 214',
+                bairro: 'Batel',
                 tipo_loja: 'Shopping',
+                modelo_loja: 'Boti Classic',
                 nome_servidor_tef_atual: 'Sul 2',
                 cod_ip_sitef_tef_atual: 'SIT2-BOTICF1-18',
                 trocou_servidor_30d: 'SIM',

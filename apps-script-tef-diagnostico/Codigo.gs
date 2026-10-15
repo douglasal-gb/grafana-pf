@@ -4,7 +4,7 @@
  * Projeto: Diagnóstico Infra TEF/POS (Grupo Boticário Tech / PDF)
  * ==============================================================================
  * Melhorias:
- *  - Join com trusted-zone.canal_loja.tb_canal_loja_geral_ttd (UF, cidade, endereço, tipo)
+ *  - Join com trusted-zone.canal_loja.tb_canal_loja_geral_ttd (UF, cidade, bairro, tipo local)
  *  - Modo de busca por UF
  *  - CTEs compartilhadas + helpers (menos duplicação / melhor manutenção)
  * ==============================================================================
@@ -12,10 +12,10 @@
 
 var CONFIG = {
   projectId: 'sandbox-mooz', // ⚠️ Substitua pelo ID do seu projeto no GCP
-  // Colunas confirmadas em tb_canal_loja_geral_ttd (uso interno GB):
-  // cidade, estado, nome_cp_atual, des_modelo_atual, tp_pdv, des_regional_atualizada,
-  // cod_franquia (com zeros à esquerda extras), flg_cod_atual
-  // endereco: campo de endereço na dimensão de loja (mesmo padrão sem prefixo de cidade/estado)
+  // Schema tb_canal_loja_geral_ttd (campos usados):
+  // cidade, bairro, estado, des_local_pdv_2 (Rua/Shopping/Hipermercado/Outros),
+  // nome_cp_atual, des_regional_atualizada, des_regional, des_modelo, tp_pdv,
+  // cod_franquia (zeros à esquerda extras), flg_cod_atual
 };
 
 /**
@@ -65,18 +65,18 @@ function getServidoresCte() {
  * flg_cod_atual = 'x' reduz duplicidade de histórico.
  */
 function getDimCanalCte() {
-  // Colunas usadas em tb_canal_loja_geral_ttd (confirmadas em uso interno):
-  // cidade, estado, nome_cp_atual, des_modelo_atual, tp_pdv, des_regional(_atualizada),
-  // cod_franquia, flg_cod_atual. Campo endereco segue o padrão sem prefixo de cidade/estado.
-  // Se BigQuery acusar coluna inexistente em endereco, troque por des_endereco.
+  // Não existe coluna de logradouro completo nesta tabela.
+  // Tipo de estabelecimento: des_local_pdv_2 (Rua, Shopping, Hipermercado, Outros).
+  // Localização: cidade + bairro + estado.
   return `
     dim_canal AS (
       SELECT
         codloja_clean,
         uf,
         cidade,
-        endereco,
+        bairro,
         tipo_loja,
+        modelo_loja,
         grupo_franquia_cadastro,
         regional
       FROM (
@@ -93,8 +93,9 @@ function getDimCanalCte() {
           ) AS codloja_clean,
           UPPER(TRIM(estado)) AS uf,
           TRIM(cidade) AS cidade,
-          TRIM(endereco) AS endereco,
-          TRIM(COALESCE(des_modelo_atual, CAST(tp_pdv AS STRING))) AS tipo_loja,
+          TRIM(bairro) AS bairro,
+          TRIM(COALESCE(des_local_pdv_2, des_local_pdv, tp_pdv)) AS tipo_loja,
+          TRIM(des_modelo) AS modelo_loja,
           TRIM(nome_cp_atual) AS grupo_franquia_cadastro,
           TRIM(COALESCE(des_regional_atualizada, des_regional)) AS regional
         FROM \`trusted-zone.canal_loja.tb_canal_loja_geral_ttd\`
@@ -421,8 +422,9 @@ function queryDashboard(processedTerm, mode) {
       COALESCE(c.grupo_franquia_cadastro, px.grupo_franquia, 'Não Informado') AS grupo_franquia,
       COALESCE(c.uf, 'N/A') AS uf,
       COALESCE(c.cidade, 'Não mapeada') AS cidade,
-      COALESCE(c.endereco, 'Não mapeado') AS endereco,
+      COALESCE(c.bairro, 'Não mapeado') AS bairro,
       COALESCE(c.tipo_loja, 'Não informado') AS tipo_loja,
+      COALESCE(c.modelo_loja, 'Não informado') AS modelo_loja,
       COALESCE(c.regional, 'Não informado') AS regional,
       st.ip_tef_atual AS cod_ip_sitef_tef_atual,
       COALESCE(st.nome_servidor_tef_atual, 'Sem Vendas TEF') AS nome_servidor_tef_atual,
